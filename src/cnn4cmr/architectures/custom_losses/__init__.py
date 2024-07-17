@@ -1,0 +1,1 @@
+from cnn4cmr.architectures.custom_losses.losses import *
