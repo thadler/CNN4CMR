@@ -2,6 +2,7 @@ import os
 import numpy as np
 import shapely
 from shapely.geometry import Polygon, MultiPolygon, box, shape
+from shapely.affinity import scale
 from rasterio import features
 from scipy.ndimage import convolve
 
@@ -75,6 +76,13 @@ def to_polygon(mask):
             else: print('Ignoring GeoJSON with cooresponding shape: ' + 
                       str(polygon.geom_type) + ' | Valid: ' + str(polygon.is_valid))
     return MultiPolygon(polygons) if len(polygons)>0 else Polygon() #polygons[0]
+
+def get_bbox_from_mask(mask, scale_f=1.0, lcc=True):
+    poly = to_polygon(mask)
+    if lcc and poly.geom_type=='MultiPolygon': poly = max(poly.geoms, key=lambda p: p.area)
+    poly = scale(poly, xfact=scale_f, yfact=scale_f, origin='center')
+    xmin, ymin, xmax, ymax = poly.bounds
+    return xmin, xmax, ymin, ymax
 
 def connect_minimal_edge_lvepi(inp):
     ret = np.copy(inp).astype(np.uint8) # lv endo = channel 0, myo = channel 1

@@ -33,7 +33,7 @@ def make_augmenter(params): # parameter_dict
     tr, sh    = params['translate'], params['shear']
     pool      = params['poolsize']
     noise     = params['noise']
-    blur     = params['blur']
+    blur      = params['blur']
     multrange = params['mult_range']
     contrast  = params['contrast']
 

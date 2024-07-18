@@ -157,22 +157,22 @@ def get_batch_imgs_heatmaps(generator, augmentations, make_heatmap_f, batchsize=
 
 
 # build a generator that loads imgs, and gold standard contours in random sequence
-def random_img_goldanno_generator(path_to_dataset, studyuid_sop_list, size, bounding_box=True, seed=42):
+def random_img_goldanno_generator(path_to_dataset, studyuid_sop_list, size, bounding_box=True, path_to_boundingbox=None, seed=42):
     rng = np.random.default_rng(seed)
     while True:
         rint      = rng.integers(low=0, high=len(studyuid_sop_list), size=1)[0]
         suid, sop = studyuid_sop_list[rint]
-        yield (suid,sop), load_img_gold_anno(path_to_dataset, suid, sop, size, bounding_box)
+        yield (suid,sop), load_img_gold_anno(path_to_dataset, suid, sop, size, bounding_box, path_to_boundingbox)
 
 
-def iterative_img_goldanno_generator(path_to_dataset, studyuid_sop_list, size, bounding_box=True, limit=-1):
+def iterative_img_goldanno_generator(path_to_dataset, studyuid_sop_list, size, bounding_box=True, path_to_boundingbox=None, limit=-1):
     for i, (suid, sop) in enumerate(studyuid_sop_list):
         #print(suid, sop)
         if i==limit: return
-        yield (suid,sop), load_img_gold_anno(path_to_dataset, suid, sop, size, bounding_box)
+        yield (suid,sop), load_img_gold_anno(path_to_dataset, suid, sop, size, bounding_box, path_to_boundingbox)
 
 
-def load_img_gold_anno(path_to_dataset, suid, sop, size, bounding_box=True):
+def load_img_gold_anno(path_to_dataset, suid, sop, size, bounding_box=True, path_to_boundingbox=None):
     # load image
     img_path  = os.path.join(path_to_dataset, 'Imgs', suid, sop+'.dcm') # load image
     img       = pydicom.dcmread(img_path).pixel_array.astype(np.float32)
@@ -185,13 +185,13 @@ def load_img_gold_anno(path_to_dataset, suid, sop, size, bounding_box=True):
         try:    gold_anno[geom_name]['cont'] = shape(gold_anno[geom_name]['cont'])
         except: print(geom_name); print(gold_anno.keys()); print(traceback.format_exc())
     # load bounding box
-    if bounding_box:
-        ainfo_path = os.path.join(path_to_dataset, 'Additional_Info', suid, sop+'.json')
+    if bounding_box: # optional gold standard bbox, or passed from AI prediction
+        if path_to_boundingbox is None: ainfo_path = os.path.join(path_to_dataset, 'Additional_Info', suid, sop+'.json')
+        else:                           ainfo_path = os.path.join(path_to_boundingbox, suid, sop+'.json')
         ainfo      = json.load(open(ainfo_path, 'rb'))
-        xmin, xmax, ymin, ymax = ainfo['bounding_box']
-        boundary = 25
-        xmin, xmax, ymin, ymax = max(xmin-boundary,0), min(xmax+boundary,w), max(ymin-boundary,0), min(ymax+boundary,h)
-        #print(xmin, xmax, ymin, ymax)
+        #xmin, xmax, ymin, ymax = ainfo['bounding_box']
+        xmin, xmax, ymin, ymax = ainfo['bounding_box_scale_2.5']
+        xmin, xmax, ymin, ymax = max(xmin,0), min(xmax,w), max(ymin,0), min(ymax,h)
 
     # get scaling factor from bounding box
     if bounding_box: sc_fact = size / max(xmax-xmin, ymax-ymin)
